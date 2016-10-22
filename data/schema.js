@@ -1,53 +1,69 @@
 import {
-GraphQLSchema,
-GraphQLObjectType,
-GraphQLList,
-GraphQLInt,
-GraphQLString
+  GraphQLSchema,
+  GraphQLObjectType,
+  GraphQLList,
+  GraphQLInt,
+  GraphQLString,
+  GraphQLNonNull,
+  GraphQLID
 
 } from 'graphql';
 
-let data = [
-  {
-    _id: 123,
-    title: '567',
-    url: '6666666'
-  },
-  {
-    _id: 1233,
-    title: '567',
-    url: 'rtrtrt'
-  }
-]
+import {
+  connectionDefinitions,
+  connectionArgs,
+  connectionFromPromisedArray
+} from 'graphql-relay';
 
-let linkType = new GraphQLObjectType({
-  name: 'Link',
-  fields: () => ({
-    _id: { type: GraphQLInt },
-    title: { type: GraphQLString},
-    url: { type: GraphQLString}
-  })
-})
+let store = {};
 
-let schema = new GraphQLSchema({
-  query: new GraphQLObjectType({
-    name: 'Query',
+let Schema = (db) => {
+  let linkType = new GraphQLObjectType({
+    name: 'Link',
     fields: () => ({
-      data: {
-        type: new GraphQLList(linkType),
-        resolve: () => data
+      // _id: { type: GraphQLString },
+      id: {
+        type: new GraphQLNonNull(GraphQLID),
+        resolve: (obj) => obj._id
       },
-    })
-  }),
-  mutation: new GraphQLObjectType({
-    name: 'Mutation',
-    fields: () => ({
-      incrementCounter: {
-        type: GraphQLInt,
-        resolve: () => ++counter
-      },
+      title: { type: GraphQLString },
+      url: { type: GraphQLString }
     })
   })
-});
 
-export default schema;
+  let linkConnection = connectionDefinitions({
+    name: 'Link',
+    nodeType: linkType
+  })
+
+  let storeType = new GraphQLObjectType({
+    name: 'Store',
+     fields: () => ({
+        linkConnection: {
+          type: linkConnection.connectionType,
+          args: connectionArgs,
+          resolve: (_, args) =>  connectionFromPromisedArray(
+            db.collection("links").find({}).limit(args.first).toArray(),
+            args
+          )
+          
+        },
+      })
+  })
+
+  let schema = new GraphQLSchema({
+    query: new GraphQLObjectType({
+      name: 'Query',
+      fields: () => ({
+        store: {
+          type: storeType,
+          resolve: () => store
+        },
+      })
+    }),
+  });
+
+  return schema;
+}
+
+export default Schema;

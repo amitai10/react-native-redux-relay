@@ -1,19 +1,24 @@
 import React, {Component} from 'react';
 import ReactDom from 'react-dom';
+import Relay from 'react-relay';
 
-class Main extends Component {
-  static propTypes = {
-    title: React.PropTypes.number
-  }
+import Main from './components/Main';
 
-  static defaultProps = {
-    title: 5
-  }
-  render() {
-    return (
-      <h1>Hello aggain + {this.props.title}</h1>
-    )
+class HomeRoute extends Relay.Route {
+  static routeName = 'Home';
+  static queries = {
+    store: ((Component) => Relay.QL`
+      query MainQuery {
+        store { ${Component.getFragment('store')}}
+      }
+    `)
   }
 }
 
-ReactDom.render(<Main />, document.getElementById('react'));
+ReactDom.render(
+  <Relay.RootContainer
+    Component={Main}
+    route={new HomeRoute()}
+    />, 
+    document.getElementById('react') 
+);
